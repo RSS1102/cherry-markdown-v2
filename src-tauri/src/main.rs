@@ -12,6 +12,9 @@ fn greet(name: &str) -> String {
 fn main() {
     tauri::Builder::default()
         .menu(capabilities::windows_menu::window_menu())
+        .on_menu_event(|event: tauri::WindowMenuEvent| {
+            capabilities::windows_menu::handle_menu_event(event);
+        })
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

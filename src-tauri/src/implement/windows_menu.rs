@@ -1,8 +1,7 @@
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 use tauri::{
-    menu::{CheckMenuItemBuilder, MenuBuilder, SubmenuBuilder},
-    App,
+    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder}, App, AppHandle, EventLoopMessage, Wry
 };
 
 lazy_static! {
@@ -54,33 +53,8 @@ impl BilingualMenuItem {
     }
 }
 
-fn set_menu_language(app: &tauri::AppHandle, lang: &str) {
-    let _ = app;
-    let language: Language = Language::new();
-
-    let items = vec![
-        ("file", &language.file),
-        ("new_file", &language.new_file),
-        ("open_file", &language.open_file),
-        ("save", &language.save),
-        ("save_as", &language.save_as),
-        ("quit", &language.quit),
-        ("language", &language.language),
-    ];
-
-    for (id, item) in items {
-        println!("Setting title for id: {}", id);
-        println!("Setting title for lang: {}", lang);
-        let title = item.get_name(lang);
-        print!("{}", title);
-    }
-}
-
-pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
-    let lang = CURRENT_LANG.lock().unwrap().clone();
-    let lang_str = lang.as_str();
+fn create_menu(app: &App, handle: &AppHandle, lang_str: &str) -> Result<Menu<Wry>, tauri::Error> {
     let language = Language::new();
-    let handle = app.handle();
 
     let file_menu = SubmenuBuilder::new(app, language.file.get_name(lang_str))
         .text("new_file", language.new_file.get_name(lang_str))
@@ -94,7 +68,6 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
         .id("en")
         .checked(lang_str == "en")
         .build(app)?;
-    
 
     let language_sub_zh = CheckMenuItemBuilder::new("中文")
         .id("zh")
@@ -110,10 +83,18 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
         .item(&file_menu)
         .item(&language_menu)
         .build()?;
+    Ok(menu)
+}
 
-    let _ = app.set_menu(menu);
+pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
+    let lang = CURRENT_LANG.lock().unwrap().clone();
+    let lang_str = lang.as_str();
+    let handle = app.handle();
+    let menu = create_menu(app, handle, lang_str)?;
 
-    app.on_menu_event(move |app, event| {
+    app.set_menu(menu)?;
+
+    app.on_menu_event(move |app_handles: &tauri::AppHandle, event| {
         println!("event {:?} ", event.id());
         if event.id() == "en" {
             let mut lang = CURRENT_LANG.lock().unwrap();

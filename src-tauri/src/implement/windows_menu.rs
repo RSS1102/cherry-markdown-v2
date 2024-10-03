@@ -1,13 +1,14 @@
 use lazy_static::lazy_static;
-use std::sync::Mutex;
+use std::sync::{ Mutex};
 use tauri::{
-    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder}, App, AppHandle, EventLoopMessage, Wry
+    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder},
+    App, AppHandle, Wry,
 };
 
 lazy_static! {
     pub static ref CURRENT_LANG: Mutex<String> = Mutex::new("en".to_string());
 }
-
+#[derive(Clone)]
 struct Language {
     file: BilingualMenuItem,
     new_file: BilingualMenuItem,
@@ -32,6 +33,7 @@ impl Language {
     }
 }
 
+#[derive(Clone)]
 struct BilingualMenuItem {
     en: String,
     zh: String,
@@ -53,56 +55,64 @@ impl BilingualMenuItem {
     }
 }
 
-fn create_menu(app: &App, handle: &AppHandle, lang_str: &str) -> Result<Menu<Wry>, tauri::Error> {
-    let language = Language::new();
-
-    let file_menu = SubmenuBuilder::new(app, language.file.get_name(lang_str))
+fn create_menu(
+    handle: &AppHandle,
+    language: Language,
+    lang_str: &str,
+) -> Result<Menu<Wry>, tauri::Error> {
+    let file_menu = SubmenuBuilder::new(handle, language.file.get_name(lang_str))
         .text("new_file", language.new_file.get_name(lang_str))
         .text("open_file", language.open_file.get_name(lang_str))
         .text("save", language.save.get_name(lang_str))
         .text("save_as", language.save_as.get_name(lang_str))
-        .text("quit", language.quit.get_name(lang_str))
-        .build()?;
+        .text("quit", language.quit.get_name(lang_str));
 
     let language_sub_en = CheckMenuItemBuilder::new("English")
         .id("en")
-        .checked(lang_str == "en")
-        .build(app)?;
+        .checked(lang_str == "en");
 
     let language_sub_zh = CheckMenuItemBuilder::new("中文")
         .id("zh")
-        .checked(lang_str == "zh")
-        .build(app)?;
+        .checked(lang_str == "zh");
 
-    let language_menu = SubmenuBuilder::new(app, language.language.get_name(lang_str))
-        .item(&language_sub_en)
-        .item(&language_sub_zh)
-        .build()?;
+    let language_menu = SubmenuBuilder::new(handle, language.language.get_name(lang_str))
+        .item(&language_sub_en.build(handle)?)
+        .item(&language_sub_zh.build(handle)?);
 
     let menu = MenuBuilder::new(handle)
-        .item(&file_menu)
-        .item(&language_menu)
+        .item(&file_menu.build()?)
+        .item(&language_menu.build()?)
         .build()?;
     Ok(menu)
 }
 
 pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     let lang = CURRENT_LANG.lock().unwrap().clone();
-    let lang_str = lang.as_str();
+    let lang_str = lang.as_str().to_string();
     let handle = app.handle();
-    let menu = create_menu(app, handle, lang_str)?;
+    let language = Language::new();
 
+    let menu = create_menu(&handle, language.clone(), &lang_str)?;
     app.set_menu(menu)?;
 
-    app.on_menu_event(move |app_handles: &tauri::AppHandle, event| {
+    let handle_clone = handle.clone();
+    let language_clone = language.clone();
+
+    app.on_menu_event(move |app_handle: &tauri::AppHandle, event| {
         println!("event {:?} ", event.id());
         if event.id() == "en" {
             let mut lang = CURRENT_LANG.lock().unwrap();
             *lang = "en".to_string();
+            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &lang) {
+                let _ = app_handle.set_menu(menu);
+            }
         }
         if event.id() == "zh" {
             let mut lang = CURRENT_LANG.lock().unwrap();
-            *lang = "en".to_string();
+            *lang = "zh".to_string();
+            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &lang) {
+                let _ = app_handle.set_menu(menu);
+            }
         }
     });
     Ok(())

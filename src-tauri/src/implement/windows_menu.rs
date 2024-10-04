@@ -1,8 +1,7 @@
 use lazy_static::lazy_static;
-use std::sync::{ Mutex};
+use std::sync::Mutex;
 use tauri::{
-    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder},
-    App, AppHandle, Wry,
+    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder}, App, AppHandle, Emitter, Wry
 };
 
 lazy_static! {
@@ -32,6 +31,17 @@ impl Language {
         }
     }
 }
+
+fn set_current_lang(lang: &str) {
+    let mut current_lang = CURRENT_LANG.lock().unwrap();
+    *current_lang = lang.to_string();
+}
+
+fn get_current_lang() -> String {
+    let current_lang = CURRENT_LANG.lock().unwrap();
+    current_lang.clone()
+}
+
 
 #[derive(Clone)]
 struct BilingualMenuItem {
@@ -87,33 +97,37 @@ fn create_menu(
 }
 
 pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
-    let lang = CURRENT_LANG.lock().unwrap().clone();
-    let lang_str = lang.as_str().to_string();
     let handle = app.handle();
     let language = Language::new();
 
-    let menu = create_menu(&handle, language.clone(), &lang_str)?;
+    let menu = create_menu(&handle, language.clone(), &get_current_lang())?;
     app.set_menu(menu)?;
 
     let handle_clone = handle.clone();
     let language_clone = language.clone();
 
     app.on_menu_event(move |app_handle: &tauri::AppHandle, event| {
-        println!("event {:?} ", event.id());
         if event.id() == "en" {
-            let mut lang = CURRENT_LANG.lock().unwrap();
-            *lang = "en".to_string();
-            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &lang) {
+            set_current_lang("en");
+            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &get_current_lang()) {
                 let _ = app_handle.set_menu(menu);
             }
         }
         if event.id() == "zh" {
-            let mut lang = CURRENT_LANG.lock().unwrap();
-            *lang = "zh".to_string();
-            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &lang) {
+            set_current_lang("zh");
+            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &&get_current_lang()) {
                 let _ = app_handle.set_menu(menu);
             }
         }
+        if event.id() == "new_file" {
+            let _ = app_handle.emit("new_file", "new file");
+        }
+        if event.id() == "open_file" {
+            let _ = app_handle.emit("open_file", "open file");
+        }
+        // if event.id() == "quit" {
+        //     app_handle.exit(0);
+        // }
     });
     Ok(())
 }

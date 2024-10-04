@@ -107,6 +107,7 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     let language_clone = language.clone();
 
     app.on_menu_event(move |app_handle: &tauri::AppHandle, event| {
+        println!("menu event: {:?}", event);
         if event.id() == "en" {
             set_current_lang("en");
             if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &get_current_lang()) {
@@ -122,7 +123,9 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
         if event.id() == "new_file" {
             let _ = app_handle.emit("new_file", "new file");
         }
+
         if event.id() == "open_file" {
+            println!("open file");
             let _ = app_handle.emit("open_file", "open file");
         }
         // if event.id() == "quit" {

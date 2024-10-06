@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 use tauri::{
-    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder}, App, AppHandle, Emitter, Wry
+    menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder},
+    App, AppHandle, Emitter, Wry,
 };
 
 lazy_static! {
@@ -42,7 +43,6 @@ fn get_current_lang() -> String {
     current_lang.clone()
 }
 
-
 #[derive(Clone)]
 struct BilingualMenuItem {
     en: String,
@@ -57,7 +57,7 @@ impl BilingualMenuItem {
         }
     }
 
-    fn get_name(&self, lang: &str) -> String {
+    fn get_lang(&self, lang: &str) -> String {
         match lang {
             "zh" => self.zh.clone(),
             _ => self.en.clone(),
@@ -70,12 +70,12 @@ fn create_menu(
     language: Language,
     lang_str: &str,
 ) -> Result<Menu<Wry>, tauri::Error> {
-    let file_menu = SubmenuBuilder::new(handle, language.file.get_name(lang_str))
-        .text("new_file", language.new_file.get_name(lang_str))
-        .text("open_file", language.open_file.get_name(lang_str))
-        .text("save", language.save.get_name(lang_str))
-        .text("save_as", language.save_as.get_name(lang_str))
-        .text("quit", language.quit.get_name(lang_str));
+    let file_menu = SubmenuBuilder::new(handle, language.file.get_lang(lang_str))
+        .text("new_file", language.new_file.get_lang(lang_str))
+        .text("open_file", language.open_file.get_lang(lang_str))
+        .text("save", language.save.get_lang(lang_str))
+        .text("save_as", language.save_as.get_lang(lang_str))
+        .text("quit", language.quit.get_lang(lang_str));
 
     let language_sub_en = CheckMenuItemBuilder::new("English")
         .id("en")
@@ -85,7 +85,7 @@ fn create_menu(
         .id("zh")
         .checked(lang_str == "zh");
 
-    let language_menu = SubmenuBuilder::new(handle, language.language.get_name(lang_str))
+    let language_menu = SubmenuBuilder::new(handle, language.language.get_lang(lang_str))
         .item(&language_sub_en.build(handle)?)
         .item(&language_sub_zh.build(handle)?);
 
@@ -106,31 +106,33 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     let handle_clone = handle.clone();
     let language_clone = language.clone();
 
-    app.on_menu_event(move |app_handle: &tauri::AppHandle, event| {
-        println!("menu event: {:?}", event);
-        if event.id() == "en" {
-            set_current_lang("en");
-            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &get_current_lang()) {
-                let _ = app_handle.set_menu(menu);
+    app.on_menu_event(
+        move |app_handle: &tauri::AppHandle, event| match event.id().0.as_str() {
+            "en" | "zh" => {
+                set_current_lang(&event.id().0.as_str());
+                if let Ok(menu) =
+                    create_menu(&handle_clone, language_clone.clone(), &get_current_lang())
+                {
+                    let _ = app_handle.set_menu(menu);
+                }
             }
-        }
-        if event.id() == "zh" {
-            set_current_lang("zh");
-            if let Ok(menu) = create_menu(&handle_clone, language_clone.clone(), &&get_current_lang()) {
-                let _ = app_handle.set_menu(menu);
+            "new_file" => {
+                let _ = app_handle.emit("new_file", "");
             }
-        }
-        if event.id() == "new_file" {
-            let _ = app_handle.emit("new_file", "new file");
-        }
-
-        if event.id() == "open_file" {
-            println!("open file");
-            let _ = app_handle.emit("open_file", "open file");
-        }
-        // if event.id() == "quit" {
-        //     app_handle.exit(0);
-        // }
-    });
+            "open_file" => {
+                let _ = app_handle.emit("open_file", "open file");
+            }
+            "save" => {
+                let _ = app_handle.emit("save", "save file");
+            }
+            "save_as" => {
+                let _ = app_handle.emit("save_as", "save as file");
+            }
+            "quit" => {
+                app_handle.exit(0);
+            }
+            _ => {}
+        },
+    );
     Ok(())
 }

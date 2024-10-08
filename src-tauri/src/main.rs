@@ -15,11 +15,9 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let _ = implement::windows_menu::window_menu(app);
+            let _ = implement::system_tray::system_tray_menu(app);
 
             Ok(())
-            // app.on_menu_event(move |app, event| {
-            //     capabilities::windows_menu::handle_menu_event(event);
-            // });
         })
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())

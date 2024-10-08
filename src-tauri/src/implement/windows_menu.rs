@@ -65,7 +65,7 @@ impl BilingualMenuItem {
     }
 }
 
-fn create_menu(
+fn create_window_menu(
     handle: &AppHandle,
     language: Language,
     lang_str: &str,
@@ -96,11 +96,12 @@ fn create_menu(
     Ok(menu)
 }
 
+/// 窗口菜单
 pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     let handle = app.handle();
     let language = Language::new();
 
-    let menu = create_menu(&handle, language.clone(), &get_current_lang())?;
+    let menu = create_window_menu(&handle, language.clone(), &get_current_lang())?;
     app.set_menu(menu)?;
 
     let handle_clone = handle.clone();
@@ -111,7 +112,7 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
             "en" | "zh" => {
                 set_current_lang(&event.id().0.as_str());
                 if let Ok(menu) =
-                    create_menu(&handle_clone, language_clone.clone(), &get_current_lang())
+                    create_window_menu(&handle_clone, language_clone.clone(), &get_current_lang())
                 {
                     let _ = app_handle.set_menu(menu);
                 }

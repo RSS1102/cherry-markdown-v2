@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2.0.0-rc",
+  "$schema": "https://schema.tauri.app/config/2.0.0",
   "productName": "cherry-markdown-client",
   "version": "0.1.0",
   "identifier": "cherry-markdown-client",

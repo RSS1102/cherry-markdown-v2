@@ -1,69 +1,9 @@
-use lazy_static::lazy_static;
-use std::sync::Mutex;
 use tauri::{
     menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder},
     App, AppHandle, Emitter, Wry,
 };
 
-lazy_static! {
-    pub static ref CURRENT_LANG: Mutex<String> = Mutex::new("en".to_string());
-}
-#[derive(Clone)]
-struct Language {
-    file: BilingualMenuItem,
-    new_file: BilingualMenuItem,
-    open_file: BilingualMenuItem,
-    save: BilingualMenuItem,
-    save_as: BilingualMenuItem,
-    quit: BilingualMenuItem,
-    language: BilingualMenuItem,
-}
-
-impl Language {
-    fn new() -> Self {
-        Language {
-            file: BilingualMenuItem::new("File", "文件"),
-            new_file: BilingualMenuItem::new("New File", "新建文件"),
-            open_file: BilingualMenuItem::new("Open File...", "打开文件..."),
-            save: BilingualMenuItem::new("Save", "保存"),
-            save_as: BilingualMenuItem::new("Save As...", "另存为..."),
-            quit: BilingualMenuItem::new("Quit", "退出"),
-            language: BilingualMenuItem::new("Language", "语言"),
-        }
-    }
-}
-
-fn set_current_lang(lang: &str) {
-    let mut current_lang = CURRENT_LANG.lock().unwrap();
-    *current_lang = lang.to_string();
-}
-
-fn get_current_lang() -> String {
-    let current_lang = CURRENT_LANG.lock().unwrap();
-    current_lang.clone()
-}
-
-#[derive(Clone)]
-struct BilingualMenuItem {
-    en: String,
-    zh: String,
-}
-
-impl BilingualMenuItem {
-    fn new(en: &str, zh: &str) -> Self {
-        BilingualMenuItem {
-            en: en.to_string(),
-            zh: zh.to_string(),
-        }
-    }
-
-    fn get_lang(&self, lang: &str) -> String {
-        match lang {
-            "zh" => self.zh.clone(),
-            _ => self.en.clone(),
-        }
-    }
-}
+use crate::utils::i18n::{get_current_lang, set_current_lang, Language};
 
 fn create_window_menu(
     handle: &AppHandle,

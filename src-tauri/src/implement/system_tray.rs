@@ -1,35 +1,62 @@
+use std::sync::Arc;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App,
+    App, AppHandle, Manager, Wry,
 };
 
-use crate::utils::windows::restore_and_focus_window;
+use crate::utils::i18n::{get_current_lang, set_current_lang, Language};
 
-pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
+use crate::utils::base::restore_and_focus_window;
+
+fn create_tray_menu(
+    app: &AppHandle,
+    language: Language,
+    lang_str: &str,
+) -> Result<Menu<Wry>, tauri::Error> {
     let show_main_window = MenuItem::with_id(
         app,
-        "show_main_window",
-        "Open Cherry Markdown",
+        "open_cherry_markdown",
+        language.open_cherry_markdown.get_lang(&lang_str),
         true,
         None::<&str>,
     )?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let quit = MenuItem::with_id(
+        app,
+        "quit",
+        language.quit.get_lang(&lang_str),
+        true,
+        None::<&str>,
+    )?;
 
-    // 切换语言
-    let lang = MenuItem::with_id(app, "lang", "切换语言", true, None::<&str>)?;
+    let language = MenuItem::with_id(
+        app,
+        "language",
+        language.language.get_lang(&lang_str),
+        true,
+        None::<&str>,
+    )?;
 
-    let menu = Menu::with_items(app, &[&show_main_window, &lang, &quit])?;
+    let menu = Menu::with_items(app, &[&show_main_window, &language, &quit])?;
 
-    let new_menu = Menu::with_items(app, &[&show_main_window])?;
+    Ok(menu)
+}
 
-    let tray_menu = TrayIconBuilder::with_id("tray")
-        .menu(&menu)
+pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
+    let language = Language::new();
+
+    let app_handle_clone = app.handle().clone();
+
+    let system_menu = create_tray_menu(&app_handle_clone, language.clone(), &get_current_lang())?;
+
+    let system_tray = TrayIconBuilder::with_id("tray")
+        .menu(&system_menu)
         .menu_on_left_click(false)
         .icon(app.default_window_icon().unwrap().clone())
         .build(app)?;
 
-    tray_menu.on_tray_icon_event(|tray, event| match event {
+    system_tray.on_tray_icon_event(|tray, event| match event {
         TrayIconEvent::Click {
             button: MouseButton::Left,
             button_state: MouseButtonState::Up,
@@ -41,22 +68,39 @@ pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
         _ => {}
     });
 
-    let tray_menu_clone = tray_menu.clone();
+    let system_tray_clone = system_tray.clone();
 
-    tray_menu.on_menu_event(move |app, event| match event.id.as_ref() {
+    system_tray.on_menu_event(move |app_handle, event| match event.id.as_ref() {
         "show_main_window" => {
-            restore_and_focus_window(app, "main");
+            restore_and_focus_window(app_handle, "main");
         }
-        "lang" => {
-            match tray_menu_clone.set_menu(Some(new_menu.clone())) {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Error setting menu: {:?}", e);
+        "language" => {
+            // 先读取当前的lang
+            let lang_str = get_current_lang();
+            // 如果是中文，就切换成英文
+            if lang_str == "zh" {
+                set_current_lang("en");
+            }
+            if lang_str == "en" {
+                set_current_lang("zh");
+            }
+            let lang_str_new = get_current_lang();
+
+            let new_menu = {
+                match create_tray_menu(app_handle, language.clone(), &lang_str_new) {
+                    Ok(menu) => menu,
+                    Err(e) => {
+                        eprintln!("Error creating tray menu: {:?}", e);
+                        return;
+                    }
                 }
+            };
+            if let Err(e) = system_tray_clone.set_menu(Some(new_menu.clone())) {
+                eprintln!("Error setting menu: {:?}", e);
             }
         }
         "quit" => {
-            app.exit(0);
+            app_handle.exit(0);
         }
         _ => {}
     });

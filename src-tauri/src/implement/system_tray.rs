@@ -1,14 +1,24 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App, Manager,
+    App,
 };
 
-pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
-    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&quit_i])?;
+use crate::utils::windows::restore_and_focus_window;
 
-    let tray = TrayIconBuilder::new()
+pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
+    let show_main_window = MenuItem::with_id(
+        app,
+        "show_main_window",
+        "Open Cherry Markdown",
+        true,
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+    let menu = Menu::with_items(app, &[&show_main_window, &quit])?;
+
+    let _ = TrayIconBuilder::new()
         .on_tray_icon_event(|tray, event| match event {
             TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -16,15 +26,20 @@ pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
                 ..
             } => {
                 let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window("main") {
-                    window.unminimize().unwrap(); // 恢复窗口，如果它被最小化
-                    window.show().unwrap();
-                    window.set_focus().unwrap();
-                }
+                restore_and_focus_window(app, "main");
             }
             _ => {}
         })
         .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show_main_window" => {
+                restore_and_focus_window(app, "main");
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
         .menu_on_left_click(false)
         .icon(app.default_window_icon().unwrap().clone())
         .build(app)?;

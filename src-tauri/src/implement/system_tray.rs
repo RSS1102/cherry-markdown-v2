@@ -1,20 +1,16 @@
-use std::sync::Arc;
-
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App, AppHandle, Manager, Wry,
+    App, AppHandle, Wry,
 };
 
-use crate::utils::i18n::{get_current_lang, set_current_lang, Language};
+use crate::utils::i18n::{get_current_lang, set_current_lang, subscribe_to_lang_change, Language};
 
 use crate::utils::base::restore_and_focus_window;
 
-fn create_tray_menu(
-    app: &AppHandle,
-    language: Language,
-    lang_str: &str,
-) -> Result<Menu<Wry>, tauri::Error> {
+fn create_tray_menu(app: &AppHandle, lang_str: &str) -> Result<Menu<Wry>, tauri::Error> {
+    let language = Language::new();
+
     let show_main_window = MenuItem::with_id(
         app,
         "open_cherry_markdown",
@@ -44,11 +40,9 @@ fn create_tray_menu(
 }
 
 pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
-    let language = Language::new();
-
     let app_handle_clone = app.handle().clone();
 
-    let system_menu = create_tray_menu(&app_handle_clone, language.clone(), &get_current_lang())?;
+    let system_menu = create_tray_menu(&app_handle_clone, &get_current_lang())?;
 
     let system_tray = TrayIconBuilder::with_id("tray")
         .menu(&system_menu)
@@ -87,7 +81,7 @@ pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
             let lang_str_new = get_current_lang();
 
             let new_menu = {
-                match create_tray_menu(app_handle, language.clone(), &lang_str_new) {
+                match create_tray_menu(app_handle, &lang_str_new) {
                     Ok(menu) => menu,
                     Err(e) => {
                         eprintln!("Error creating tray menu: {:?}", e);
@@ -104,6 +98,29 @@ pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
         }
         _ => {}
     });
+    let system_tray_clone_for_subscribe = system_tray.clone();
+    let app_handle_clone_for_subscribe = app_handle_clone.clone();
+
+    subscribe_to_lang_change(
+        "example".to_string(),
+        Box::new({
+            move |lang: String| {
+                println!("Language changed to: {}", lang);
+                let new_menu = {
+                    match create_tray_menu(&app_handle_clone_for_subscribe, &lang) {
+                        Ok(menu) => menu,
+                        Err(e) => {
+                            eprintln!("Error creating tray menu: {:?}", e);
+                            return;
+                        }
+                    }
+                };
+                if let Err(e) = system_tray_clone_for_subscribe.set_menu(Some(new_menu.clone())) {
+                    eprintln!("Error setting menu: {:?}", e);
+                }
+            }
+        }),
+    );
 
     Ok(())
 }

@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{CheckMenuItemBuilder, Menu, MenuBuilder, SubmenuBuilder},
     App, AppHandle, Emitter, Wry,
@@ -7,9 +8,10 @@ use crate::utils::i18n::{get_current_lang, set_current_lang, subscribe_to_lang_c
 
 fn create_window_menu(
     handle: &AppHandle,
-    language: Language,
+    language: Arc<Mutex<Language>>,
     lang_str: &str,
 ) -> Result<Menu<Wry>, tauri::Error> {
+    let language = language.lock().unwrap();
     let file_menu = SubmenuBuilder::new(handle, language.file.get_lang(lang_str))
         .text("new_file", language.new_file.get_lang(lang_str))
         .text("open_file", language.open_file.get_lang(lang_str))
@@ -39,7 +41,7 @@ fn create_window_menu(
 /// 窗口菜单
 pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     let handle = app.handle();
-    let language = Language::new();
+    let language = Arc::new(Mutex::new(Language::new()));
 
     let menu = create_window_menu(&handle, language.clone(), &get_current_lang())?;
     app.set_menu(menu)?;
@@ -79,11 +81,16 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
     subscribe_to_lang_change(
         "windows_menu".to_string(),
         Box::new({
+            let handle_clone = handle.clone();
+            let language_clone = language.clone();
+
             move |lang: String| {
-                println!("Language changed to: {}", lang);
-                create_window_menu(&handle_clone, language_clone.clone(), &lang);
+                println!("windows_menu Language changed to: {}", lang);
+                if let Ok(menu) = create_window_menu(&handle_clone, language_clone.clone(), &lang) {
+                    let _ = handle_clone.set_menu(menu);
+                }
             }
-        }),
+        }) as Box<dyn Fn(String) + Send + Sync>,
     );
     Ok(())
 }

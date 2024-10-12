@@ -3,7 +3,7 @@ use tauri::{
     App, AppHandle, Emitter, Wry,
 };
 
-use crate::utils::i18n::{get_current_lang, set_current_lang, Language};
+use crate::utils::i18n::{get_current_lang, set_current_lang, subscribe_to_lang_change, Language};
 
 fn create_window_menu(
     handle: &AppHandle,
@@ -74,6 +74,16 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
             }
             _ => {}
         },
+    );
+
+    subscribe_to_lang_change(
+        "windows_menu".to_string(),
+        Box::new({
+            move |lang: String| {
+                println!("Language changed to: {}", lang);
+                create_window_menu(&handle_clone, language_clone.clone(), &lang);
+            }
+        }),
     );
     Ok(())
 }

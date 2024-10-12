@@ -102,7 +102,7 @@ pub fn system_tray_menu(app: &mut App) -> Result<(), tauri::Error> {
     let app_handle_clone_for_subscribe = app_handle_clone.clone();
 
     subscribe_to_lang_change(
-        "example".to_string(),
+        "system_tray".to_string(),
         Box::new({
             move |lang: String| {
                 println!("Language changed to: {}", lang);

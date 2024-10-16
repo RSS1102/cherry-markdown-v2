@@ -63,13 +63,13 @@ pub fn window_menu(app: &mut App) -> Result<(), tauri::Error> {
                 let _ = app_handle.emit("new_file", "");
             }
             "open_file" => {
-                let _ = app_handle.emit("open_file", "open file");
+                let _ = app_handle.emit("open_file", "");
             }
             "save" => {
-                let _ = app_handle.emit("save", "save file");
+                let _ = app_handle.emit("save", "");
             }
             "save_as" => {
-                let _ = app_handle.emit("save_as", "save as file");
+                let _ = app_handle.emit("save_as", "");
             }
             "quit" => {
                 app_handle.exit(0);

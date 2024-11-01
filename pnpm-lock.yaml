@@ -18,8 +18,8 @@ importers:
         specifier: ~2
         version: 2.0.0
       cherry-markdown:
-        specifier: ' 0.8.49'
-        version: 0.8.49
+        specifier: '0.8.50 '
+        version: 0.8.50
       pinia:
         specifier: ^2.2.4
         version: 2.2.4(typescript@5.6.2)(vue@3.5.8(typescript@5.6.2))
@@ -475,8 +475,8 @@ packages:
   browser-process-hrtime@1.0.0:
     resolution: {integrity: sha512-9o5UecI3GhkpM6DrXr69PblIuWxPKk9Y0jHBRhdocZ2y7YECBFCsHm79Pr3OyR2AvjhDkabFJaDJMYRazHgsow==}
 
-  cherry-markdown@0.8.49:
-    resolution: {integrity: sha512-ghdAYGB23Zq33PblkR2aodbKIGBj8VJ8dVZ0Ng99Zja0p5jQu80+B2zEW/3efy8qHB/dTkhn3Ld9okVd6/EnSA==}
+  cherry-markdown@0.8.50:
+    resolution: {integrity: sha512-Xn6lQcHGa7rd9NqNYkefqgF4MT3mCY2ywB2/QDOqQUesDPhbFBXctZk0UmsCiNzsEa5BdnUqW/u9eB6UMRy6cg==}
     engines: {node: '>=14'}
 
   combined-stream@1.0.8:
@@ -1360,7 +1360,7 @@ snapshots:
 
   browser-process-hrtime@1.0.0: {}
 
-  cherry-markdown@0.8.49:
+  cherry-markdown@0.8.50:
     dependencies:
       '@types/codemirror': 0.0.108
       '@types/dompurify': 2.4.0
